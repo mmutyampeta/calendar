@@ -39,6 +39,13 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Redirect authenticated users from home page to calendar
+  if (user && request.nextUrl.pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/calendar'
+    return NextResponse.redirect(url)
+  }
+
   // Protected routes logic
   if (
     !user &&
