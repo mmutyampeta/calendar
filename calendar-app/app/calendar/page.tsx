@@ -7,6 +7,7 @@ import type { User } from '@supabase/supabase-js'
 import CreateEventModal from '@/app/components/CreateEventModal'
 import SliderToggle from '@/app/components/SliderToggle'
 import Header from '@/app/components/Header'
+import {getEvents} from '@/lib/supabase/actions'
 
 type ViewMode = 'month' | 'week'
 
@@ -408,16 +409,75 @@ useEffect(() => {
                       </div>
                     </div>
                     
-                    {/* Hour blocks */}
-                    <div className="flex-1">
+                    {/* Hour blocks with events */}
+                    <div className="relative flex-1">
                       {Array.from({ length: 24 }, (_, hour) => (
                         <div
                           key={hour}
                           className="relative h-16 border-b border-gray-200 dark:border-[#2d2d2d]"
-                        >
-                          {/* Events will be positioned here */}
-                        </div>
+                        />
                       ))}
+                      
+                      {/* Event tiles positioned absolutely */}
+                      {getEventsForDate(day).map((event) => {
+                        const startDate = new Date(event.start_datetime)
+                        const endDate = new Date(event.end_datetime)
+                        
+                        // Calculate position and height
+                        const startHour = startDate.getHours()
+                        const startMinute = startDate.getMinutes()
+                        const endHour = endDate.getHours()
+                        const endMinute = endDate.getMinutes()
+                        
+                        const topPosition = (startHour * 64) + (startMinute / 60 * 64) // 64px per hour
+                        const duration = ((endHour * 60 + endMinute) - (startHour * 60 + startMinute)) / 60
+                        const height = duration * 64 // 64px per hour
+                        
+                        return (
+                          <div
+                            key={event.id}
+                            className={`group/event absolute left-1 right-1 rounded px-2 py-1 text-xs font-medium text-white shadow-sm transition-all hover:shadow-md hover:z-20 ${getImportanceColor(
+                              event.importance
+                            )}`}
+                            style={{
+                              top: `${topPosition}px`,
+                              height: `${Math.max(height, 20)}px`, // Minimum height of 20px
+                            }}
+                          >
+                            <div className="font-semibold truncate">{event.event_name}</div>
+                            {height > 40 && (
+                              <div className="text-[10px] opacity-90">
+                                {startDate.toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                              </div>
+                            )}
+                            
+                            {/* Hover tooltip for more details */}
+                            <div className="pointer-events-none absolute left-full top-0 z-30 ml-2 hidden w-64 rounded-lg bg-black p-3 text-white shadow-xl group-hover/event:block dark:bg-white dark:text-black">
+                              <div className="font-semibold text-sm">{event.event_name}</div>
+                              {event.Description && (
+                                <div className="mt-1 text-xs opacity-80">{event.Description}</div>
+                              )}
+                              <div className="mt-2 text-xs opacity-60">
+                                {startDate.toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                                {' - '}
+                                {endDate.toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                              </div>
+                              <div className="mt-1 text-xs opacity-60">
+                                Importance: {event.importance}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </button>
                 )
@@ -441,18 +501,15 @@ useEffect(() => {
           setIsModalOpen(false)
           // Refetch events when modal closes
           if (user) {
-            supabase
-              .from('calendar_items')
-              .select('*')
-              .eq('user_id', user.id)
-              .order('start_datetime', { ascending: true })
-              .then(({ data, error }) => {
-                if (error) {
-                  console.error('Error fetching events:', error)
-                } else {
-                  setEvents(data || [])
-                }
-              })
+            getEvents().then(({ data, error }) => {
+              if (error) {
+                console.error('Error fetching events:', error)
+              }
+              else if (data) {
+                console.log('Fetched events:', data)
+                setEvents(data || [])
+              }
+            })
           }
         }}
         selectedDate={selectedDate}
