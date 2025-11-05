@@ -232,84 +232,24 @@ export default function CreateEventModal({ isOpen, onClose, selectedDate }: Crea
               </div>
 
               {/* Importance */}
-              
               <div>
                 <label className="mb-2 block text-sm font-medium text-black dark:text-white">
                   Importance
                 </label>
-                <div className="relative inline-flex w-full rounded-lg border border-gray-300 bg-white p-1 dark:border-[#3a3a3a] dark:bg-[#1c1c1c]">
-                  <div
-                    className={`absolute top-1 h-9 rounded-md bg-black transition-transform duration-300 ease-in-out dark:bg-white ${
-                      importance === 'none' ? 'translate-x-0 w-[calc(25%-0.25rem)]' :
-                      importance === 'low' ? 'translate-x-[calc(100%+0.25rem)] w-[calc(25%-0.25rem)]' :
-                      importance === 'medium' ? 'translate-x-[calc(200%+0.5rem)] w-[calc(25%-0.25rem)]' :
-                      'translate-x-[calc(300%+0.75rem)] w-[calc(25%-0.25rem)]'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setImportance('none')}
-                    className={`relative z-10 flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors duration-300 ${
-                      importance === 'none'
-                        ? 'text-white dark:text-black'
-                        : 'text-black dark:text-white'
-                    }`}
-                  >
-                    None
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setImportance('low')}
-                    className={`relative z-10 flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors duration-300 ${
-                      importance === 'low'
-                        ? 'text-white dark:text-black'
-                        : 'text-black dark:text-white'
-                    }`}
-                  >
-                    Low
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setImportance('medium')}
-                    className={`relative z-10 flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors duration-300 ${
-                      importance === 'medium'
-                        ? 'text-white dark:text-black'
-                        : 'text-black dark:text-white'
-                    }`}
-                  >
-                    Medium
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setImportance('high')}
-                    className={`relative z-10 flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors duration-300 ${
-                      importance === 'high'
-                        ? 'text-white dark:text-black'
-                        : 'text-black dark:text-white'
-                    }`}
-                  >
-                    High
-                  </button>
-                </div>
+                <SliderToggle
+                  options={[
+                    { value: 'none', label: 'None' },
+                    { value: 'low', label: 'Low' },
+                    { value: 'medium', label: 'Medium' },
+                    { value: 'high', label: 'High' },
+                  ]}
+                  value={importance}
+                  onChange={setImportance}
+                />
               </div>
             </div>
             <input type="hidden" name="importance" value={importance} />
 
-            {/* Importance */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-black dark:text-white">
-                Importance
-              </label>
-              <SliderToggle
-                options={[
-                  { value: 'none', label: 'None' },
-                  { value: 'low', label: 'Low' },
-                  { value: 'medium', label: 'Medium' },
-                  { value: 'high', label: 'High' },
-                ]}
-                value={importance}
-                onChange={setImportance}
-              />
             {/* Footer */}
             <div className="mt-6 flex gap-3">
               <button
