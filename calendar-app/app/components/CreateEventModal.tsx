@@ -9,9 +9,10 @@ interface CreateEventModalProps {
   isOpen: boolean
   onClose: () => void
   selectedDate: Date
+  isTask?: boolean // Optional prop to indicate if creating a task
 }
 
-export default function CreateEventModal({ isOpen, onClose, selectedDate }: CreateEventModalProps) {
+export default function CreateEventModal({ isOpen, onClose, selectedDate, isTask = false }: CreateEventModalProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState(selectedDate.toISOString().split('T')[0])
@@ -90,7 +91,7 @@ export default function CreateEventModal({ isOpen, onClose, selectedDate }: Crea
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-[#2d2d2d]">
-            <h2 className="text-2xl font-semibold text-black dark:text-white">Create Event</h2>
+            <h2 className="text-2xl font-semibold text-black dark:text-white">{isTask ? 'Create Task' : 'Create Event'}</h2>
             <button
               onClick={onClose}
               className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-black dark:text-gray-400 dark:hover:bg-[#2a2a2a] dark:hover:text-white"
@@ -249,6 +250,7 @@ export default function CreateEventModal({ isOpen, onClose, selectedDate }: Crea
               </div>
             </div>
             <input type="hidden" name="importance" value={importance} />
+            <input type="hidden" name="isTask" value={isTask.toString()} />
 
             {/* Footer */}
             <div className="mt-6 flex gap-3">
@@ -264,7 +266,7 @@ export default function CreateEventModal({ isOpen, onClose, selectedDate }: Crea
                 disabled={loading}
                 className="flex-1 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200"
               >
-                {loading ? 'Creating...' : 'Create Event'}
+                {loading ? 'Creating...' : isTask ? 'Create Task' : 'Create Event'}
               </button>
             </div>
           </form>
@@ -273,7 +275,7 @@ export default function CreateEventModal({ isOpen, onClose, selectedDate }: Crea
 
       {/* Success Toast */}
       <SuccessToast
-        message="Event created successfully!"
+        message={isTask ? "Task created successfully!" : "Event created successfully!"}
         isVisible={showSuccess}
         onClose={() => setShowSuccess(false)}
         duration={3000}

@@ -71,29 +71,8 @@ export default function SuccessToast({
               </svg>
             </button>
           </div>
-
-          {/* Progress Bar */}
-          <div className="mt-4 h-1 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-[#2a2a2a]">
-            <div
-              className="h-full bg-green-600 dark:bg-green-400 animate-progress"
-              style={{
-                animation: `progress ${duration}ms linear forwards`,
-              }}
-            />
-          </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes progress {
-          from {
-            width: 100%;
-          }
-          to {
-            width: 0%;
-          }
-        }
-      `}</style>
     </div>
   )
 }

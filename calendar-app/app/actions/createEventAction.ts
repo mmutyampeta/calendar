@@ -9,6 +9,7 @@ export async function createEvent(formData: FormData) {
     const endDate = formData.get('endDate')
     const endTime = formData.get('endTime')
     const importance = formData.get('importance')?.toString().toUpperCase() || 'none'
+    const isTask = formData.get('isTask') === 'true'
 
     const startDateTime = `${startDate}T${startTime}`
     const endDateTime = `${endDate}T${endTime}`
@@ -61,6 +62,7 @@ export async function createEvent(formData: FormData) {
             start_datetime: start,
             end_datetime: end,
             importance: importance,
+            is_task: isTask,
         },
     ])
 
