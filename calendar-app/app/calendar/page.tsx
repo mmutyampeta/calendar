@@ -10,12 +10,24 @@ import Header from '@/app/components/Header'
 
 type ViewMode = 'month' | 'week'
 
+interface CalendarEvent {
+  id: string
+  event_name: string
+  Description: string | null
+  start_datetime: string
+  end_datetime: string
+  importance: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' 
+}
+
 export default function CalendarPage() {
   const [user, setUser] = useState<User | null>(null)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('month')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+
   const router = useRouter()
   const supabase = createClient()
 
@@ -35,8 +47,50 @@ export default function CalendarPage() {
     checkUser()
   }, [router, supabase])
 
+useEffect(() => {
+  if (!user) return // if the user is not valid, skip 
+
+  const fetchEvents = async () => {
+    const { data, error } = await supabase
+      .from("calendar_items")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("start_datetime", { ascending: true })
+
+    if (error) {
+      // handling error in supabase query 
+      console.error("Error fetching events:", error.message)
+    } else {
+      setEvents(data || [])
+    }
+  }
+
+  fetchEvents()
+}, [user, supabase])
+
   if (!user) {
     return null // or a loading spinner
+  }
+
+  // function to get all events for a specific date
+  const getEventsForDate = (date: Date) => {
+    return events.filter(event => {
+      const eventDate = new Date(event.start_datetime)
+      return (
+        eventDate.getFullYear() === date.getFullYear() &&
+        eventDate.getMonth() === date.getMonth() &&
+        eventDate.getDate() === date.getDate()
+      )
+    })
+  }
+
+  const getImportanceColor = (importance: string) => {
+    switch (importance) {
+      case 'HIGH': return 'bg-red-500 dark:bg-red-600'
+      case 'MEDIUM': return 'bg-yellow-500 dark:bg-yellow-600'
+      case 'LOW': return 'bg-blue-500 dark:bg-blue-600'
+      default: return 'bg-gray-500 dark:bg-gray-600'
+    }
   }
 
   const goToToday = () => {
@@ -241,7 +295,40 @@ export default function CalendarPage() {
                         >
                           {dayNumber}
                         </div>
-                        {/* Events will go here */}
+                        {/* Event tiles will go here */}
+                        {cellDate && ( // only render events for valid dates
+                          <div className="mt-2 w-full space-y-1">
+                            {getEventsForDate(cellDate).slice(0, 3).map((event) => (
+                              <div
+                                key={event.id}
+                                className={`group relative rounded px-2 py-1 text-xs font-medium text-white transition-all hover:shadow-md ${getImportanceColor(
+                                  event.importance
+                                )}`}
+                              >
+                                <div className="truncate">{event.event_name}</div>
+                                {/* Tooltip */}
+                                {/* this div shows on hover */}
+                                <div className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-48 rounded-lg bg-black p-2 text-white shadow-xl group-hover:block dark:bg-white dark:text-black">
+                                  <div className="font-semibold">{event.event_name}</div>
+                                  {event.Description && (
+                                    <div className="mt-1 text-xs opacity-80">{event.Description}</div>
+                                  )}
+                                  <div className="mt-1 text-xs opacity-60">
+                                    {new Date(event.start_datetime).toLocaleTimeString('en-US', {
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                            {getEventsForDate(cellDate).length > 3 && (
+                              <div className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                +{getEventsForDate(cellDate).length - 3} more
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </>
                     )}
                   </button>
@@ -350,7 +437,24 @@ export default function CalendarPage() {
       {/* Create Event Modal */}
       <CreateEventModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false)
+          // Refetch events when modal closes
+          if (user) {
+            supabase
+              .from('calendar_items')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('start_datetime', { ascending: true })
+              .then(({ data, error }) => {
+                if (error) {
+                  console.error('Error fetching events:', error)
+                } else {
+                  setEvents(data || [])
+                }
+              })
+          }
+        }}
         selectedDate={selectedDate}
       />
     </div>
