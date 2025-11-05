@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import CreateEventModal from '@/app/components/CreateEventModal'
+import SliderToggle from '@/app/components/SliderToggle'
+import Header from '@/app/components/Header'
 
 type ViewMode = 'month' | 'week'
 
@@ -109,25 +111,12 @@ export default function CalendarPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#1c1c1c] [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-400 dark:[&::-webkit-scrollbar-track]:bg-[#1c1c1c] dark:[&::-webkit-scrollbar-thumb]:bg-[#3a3a3a] dark:[&::-webkit-scrollbar-thumb]:hover:bg-[#4a4a4a]" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3a3a3a #1c1c1c' }}>
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white dark:border-[#2d2d2d] dark:bg-[#1c1c1c]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-black dark:text-white">
-            Calendar
-          </h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              {user.email}
-            </span>
-            <button
-              onClick={handleSignOut}
-              className="rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-700 dark:bg-gray-100 dark:text-black dark:hover:bg-gray-300"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
+        <Header
+          title="Calendar" 
+          userEmail={user.email || ''} 
+          currentPage="calendar"
+          onSignOut={handleSignOut}
+        />
 
       {/* Calendar Content */}
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -166,34 +155,16 @@ export default function CalendarPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {/* Animated View Toggle */}
-            <div className="relative inline-flex rounded-lg border border-gray-300 bg-white p-1 dark:border-[#3a3a3a] dark:bg-[#1c1c1c]">
-              <div
-                className={`absolute top-1 h-8 w-20 rounded-md bg-black transition-transform duration-300 ease-in-out dark:bg-white ${
-                  viewMode === 'week' ? 'translate-x-20' : 'translate-x-0'
-                }`}
-              />
-              <button
-                onClick={() => setViewMode('month')}
-                className={`relative z-10 w-20 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors duration-300 ${
-                  viewMode === 'month'
-                    ? 'text-white dark:text-black'
-                    : 'text-black dark:text-white'
-                }`}
-              >
-                Month
-              </button>
-              <button
-                onClick={() => setViewMode('week')}
-                className={`relative z-10 w-20 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors duration-300 ${
-                  viewMode === 'week'
-                    ? 'text-white dark:text-black'
-                    : 'text-black dark:text-white'
-                }`}
-              >
-                Week
-              </button>
-            </div>
+            {/* View Mode Toggle */}
+            <SliderToggle
+              options={[
+                { value: 'month', label: 'Month' },
+                { value: 'week', label: 'Week' },
+              ]}
+              value={viewMode}
+              onChange={setViewMode}
+              className="w-[168px]"
+            />
             <button
               onClick={() => setIsModalOpen(true)}
               className="rounded-md bg-black px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
