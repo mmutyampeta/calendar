@@ -64,8 +64,12 @@ export async function getEvents() {
     .from('calendar_items')
     .select('*')
     .eq('user_id', user.id)
+    .is('is_task', false) // Only fetch events, not tasks
     .eq('archived', false) // Exclude archived events
     .order('start_datetime', { ascending: true })
+
+  // console log data for debugging
+  console.log('Fetched events for user:', user.id, data)
 
   if (error) {
     return { error: error.message }
@@ -74,6 +78,38 @@ export async function getEvents() {
   return { data }
 }
 
+/**
+ * 
+ * Server Action to get all tasks
+ */
+export async function getTasks() {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'User not authenticated' }
+  }
+
+  const { data, error } = await supabase
+    .from('calendar_items')
+    .select('*')
+    .eq('user_id', user.id)
+    .is('is_task', true) // Only fetch tasks
+    .eq('archived', false) // Exclude archived tasks
+    .order('start_datetime', { ascending: true })
+
+  // console log data for debugging
+  console.log('Fetched tasks for user:', user.id, data)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { data }
+}
 /**
  * Server Action to get events within a date range
  */
@@ -127,7 +163,7 @@ export async function updateEvent(eventId: string, updates: Partial<NewEventInpu
   if (updates.importance !== undefined) dbUpdates.importance = updates.importance
   if (updates.complete !== undefined) dbUpdates.complete = updates.complete
   if (updates.archived !== undefined) dbUpdates.archived = updates.archived
-  
+
   dbUpdates.updated_at = new Date().toISOString()
 
   const { data, error } = await supabase

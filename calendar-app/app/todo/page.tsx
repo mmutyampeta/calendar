@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import EventCard, { EventCardProps } from '@/app/components/EventCard'
 import Header from '@/app/components/Header'
 import CreateEventModal from '@/app/components/CreateEventModal'
-import { getEvents, toggleEventComplete } from '@/lib/supabase/actions'
+import { getTasks, toggleEventComplete } from '@/lib/supabase/actions'
 import type { User } from '@supabase/supabase-js'
 
 // Database event type based on calendar_items table
@@ -122,7 +122,7 @@ export default function TodoPage() {
 
       setLoading(true)
       console.log('🔍 DEBUG: Fetching events from Supabase...')
-      const result = await getEvents()
+      const result = await getTasks()
       
       console.log('🔍 DEBUG: Raw Supabase result:', result)
       
@@ -312,10 +312,10 @@ export default function TodoPage() {
           // Refetch events when modal closes
           if (user) {
             setLoading(true)
-            const result = await getEvents()
+            const result = await getTasks()
             
             if (result.error) {
-              console.error('Error fetching events:', result.error)
+              console.error('Error fetching tasks:', result.error)
               setEvents([])
             } else if (result.data) {
               const mappedEvents = result.data.map(mapDbEventToCard)
