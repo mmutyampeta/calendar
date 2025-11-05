@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import SuccessToast from './SuccessToast'
-import { createEvent } from './createEventAction'
+import { createEvent } from '../actions/createEventAction'
 
 interface CreateEventModalProps {
   isOpen: boolean
