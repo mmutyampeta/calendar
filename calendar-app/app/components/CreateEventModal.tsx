@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import SliderToggle from './SliderToggle'
 import SuccessToast from './SuccessToast'
 import { createEvent } from './createEventAction'
 
@@ -294,6 +295,21 @@ export default function CreateEventModal({ isOpen, onClose, selectedDate }: Crea
             </div>
             <input type="hidden" name="importance" value={importance} />
 
+            {/* Importance */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-black dark:text-white">
+                Importance
+              </label>
+              <SliderToggle
+                options={[
+                  { value: 'none', label: 'None' },
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                ]}
+                value={importance}
+                onChange={setImportance}
+              />
             {/* Footer */}
             <div className="mt-6 flex gap-3">
               <button
