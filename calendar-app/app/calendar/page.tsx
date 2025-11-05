@@ -221,7 +221,7 @@ useEffect(() => {
             />
             <button
               onClick={() => setIsModalOpen(true)}
-              className="rounded-md bg-black px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+              className="rounded-md bg-black px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 whitespace-nowrap"
             >
               + New Event
             </button>
