@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import SliderToggle from './SliderToggle'
 import SuccessToast from './SuccessToast'
-import { createEvent } from './createEventAction'
+import { createEvent } from '../actions/createEventAction'
 
 interface CreateEventModalProps {
   isOpen: boolean
