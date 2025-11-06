@@ -1,7 +1,8 @@
 "use server"
+
 import { createClient } from "@/lib/supabase/server"
 
-export async function createEvent(formData: FormData) {
+export async function editEvent(formData: FormData) {
     const title = formData.get('title')
     const description = formData.get('description')
     const startDate = formData.get('startDate')
@@ -11,9 +12,6 @@ export async function createEvent(formData: FormData) {
     const importance = formData.get('importance')?.toString().toUpperCase() || 'none'
     const isTask = false
 
-    const startDateTime = `${startDate}T${startTime}`
-    const endDateTime = `${endDate}T${endTime}`
-
     const buildLocalDateTime = (dateStr: string, timeStr: string) => {
         const dt = new Date(`${dateStr}T${timeStr}`)
 
@@ -22,7 +20,6 @@ export async function createEvent(formData: FormData) {
         const offsetSign = tzOffset >= 0 ? '+' : '-'
         const offsetHours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, '0')
         const offsetMins = String(Math.abs(tzOffset) % 60).padStart(2, '0')
-
         // Build ISO-8601 string with timezone
         const year = dt.getFullYear()
         const month = String(dt.getMonth() + 1).padStart(2, '0')
@@ -37,6 +34,7 @@ export async function createEvent(formData: FormData) {
     const start = buildLocalDateTime(startDate as string, startTime as string)
     const end = buildLocalDateTime(endDate as string, endTime as string)
 
+    console.log("Sending Edit Event Data:")
     console.log('Form Data:')
     console.log('Title:', title)
     console.log('Description:', description)
@@ -54,21 +52,21 @@ export async function createEvent(formData: FormData) {
         return { success: false, error: 'User not authenticated' }
     }
 
-    const { error } = await supabase.from('calendar_items').insert([
-        {
-            user_id: user.id,
-            event_name: title,
-            Description: description,
-            start_datetime: start,
-            end_datetime: end,
-            importance: importance,
-            is_task: isTask,
-        },
-    ])
+    const eventId = formData.get('eventId') as string
+
+    const { error } = await supabase.from('calendar_items').update({
+        event_name: title,
+        Description: description,
+        start_datetime: start,
+        end_datetime: end,
+        importance: importance.toUpperCase(),
+        is_task: false
+    }).eq('id', eventId).eq('user_id', user.id)
 
     if (error) {
-        console.error('Error inserting event:', error.message)
+        console.error('Error updating event:', error)
         return { success: false, error: error.message }
     }
+
     return { success: true }
 }

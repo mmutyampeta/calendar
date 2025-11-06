@@ -249,7 +249,7 @@ export default function CreateEventModal({ isOpen, onClose, selectedDate, isTask
                 />
               </div>
             </div>
-            <input type="hidden" name="importance" value={importance} />
+            <input type="hidden" name="importance" value={importance} /> {/* necessary to include importance in form data */}
             <input type="hidden" name="isTask" value={isTask.toString()} />
 
             {/* Footer */}
