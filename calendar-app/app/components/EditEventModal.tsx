@@ -3,16 +3,25 @@
 import { useState, useEffect } from 'react'
 import SliderToggle from './SliderToggle'
 import SuccessToast from './SuccessToast'
-import { getEventById } from '@/lib/supabase/actions'
+import { editEvent } from '@/app/actions/EditEventAction'
+
+interface CalendarEvent {
+  id: string
+  event_name: string
+  Description: string | null
+  start_datetime: string
+  end_datetime: string
+  importance: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH'
+}
 
 interface EditEventModalProps {
   isOpen: boolean
   onClose: () => void
-  eventId: string | null
+  event: CalendarEvent | null
   isTask?: boolean // Whether this is a task or event
 }
 
-export default function EditEventModal({ isOpen, onClose, eventId, isTask = false }: EditEventModalProps) {
+export default function EditEventModal({ isOpen, onClose, event, isTask = false }: EditEventModalProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -21,106 +30,38 @@ export default function EditEventModal({ isOpen, onClose, eventId, isTask = fals
   const [endTime, setEndTime] = useState('')
   const [importance, setImportance] = useState<'none' | 'low' | 'medium' | 'high'>('none')
   const [loading, setLoading] = useState(false)
-  const [loadingData, setLoadingData] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [error, setError] = useState('')
 
-  // Fetch event data when modal opens and eventId changes
+  // Load event data when modal opens and event changes
   useEffect(() => {
-    const loadEventData = async () => {
-      if (!isOpen || !eventId) return
+    if (!isOpen || !event) return
 
-      setLoadingData(true)
-      setError('')
-      setShowSuccess(false) // Reset success toast when opening modal
+    setError('')
+    setShowSuccess(false) // Reset success toast when opening modal
 
-      try {
-        const result = await getEventById(eventId)
-
-        if (result.error) {
-          setError(result.error)
-          return
-        }
-
-        if (result.data) {
-          const event = result.data
-          
-          // Set form fields from the event data
-          setTitle(event.event_name || '')
-          setDescription(event.Description || '')
-          
-          // Parse datetime strings
-          const startDateTime = new Date(event.start_datetime)
-          const endDateTime = new Date(event.end_datetime)
-          
-          // Format dates for input fields (YYYY-MM-DD)
-          setStartDate(startDateTime.toISOString().split('T')[0])
-          setEndDate(endDateTime.toISOString().split('T')[0])
-          
-          // Format times for input fields (HH:MM)
-          setStartTime(startDateTime.toTimeString().slice(0, 5))
-          setEndTime(endDateTime.toTimeString().slice(0, 5))
-          
-          // Map importance from database (uppercase string or number) to lowercase
-          const importanceValue = typeof event.importance === 'string' 
-            ? event.importance.toLowerCase() as 'none' | 'low' | 'medium' | 'high'
-            : event.importance === 0 ? 'none'
-            : event.importance === 1 ? 'low'
-            : event.importance === 2 ? 'medium'
-            : event.importance === 3 ? 'high'
-            : 'none'
-          
-          setImportance(importanceValue)
-        }
-      } catch (err) {
-        console.error('Error loading event:', err)
-        setError('Failed to load event data')
-      } finally {
-        setLoadingData(false)
-      }
-    }
-
-    loadEventData()
-  }, [isOpen, eventId])
+    // Set form fields from the event data
+    setTitle(event.event_name || '')
+    setDescription(event.Description || '')
+    
+    // Parse datetime strings
+    const startDateTime = new Date(event.start_datetime)
+    const endDateTime = new Date(event.end_datetime)
+    
+    // Format dates for input fields (YYYY-MM-DD)
+    setStartDate(startDateTime.toISOString().split('T')[0])
+    setEndDate(endDateTime.toISOString().split('T')[0])
+    
+    // Format times for input fields (HH:MM)
+    setStartTime(startDateTime.toTimeString().slice(0, 5))
+    setEndTime(endDateTime.toTimeString().slice(0, 5))
+    
+    // Map importance from database (uppercase string) to lowercase
+    const importanceValue = event.importance.toLowerCase() as 'none' | 'low' | 'medium' | 'high'
+    setImportance(importanceValue)
+  }, [isOpen, event])
 
   if (!isOpen) return null
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    try {
-      // Placeholder for update logic
-      console.log('Update event:', {
-        eventId,
-        title,
-        description,
-        startDate,
-        startTime,
-        endDate,
-        endTime,
-        importance,
-        isTask,
-      })
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Show success toast
-      setShowSuccess(true)
-      
-      // Close modal after a short delay
-      setTimeout(() => {
-        onClose()
-      }, 500)
-    } catch (err) {
-      console.error('Error updating event:', err)
-      setError('Failed to update event')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -157,19 +98,39 @@ export default function EditEventModal({ isOpen, onClose, eventId, isTask = fals
           </div>
 
           {/* Form */}
-          <form className="p-6" onSubmit={handleSubmit}>
+          <form className="p-6" action={async (formData: FormData) => {
+            setLoading(true)
+            setError('')
+            
+            // Append event ID to form data
+            formData.append('eventId', event?.id || '')
+            const result = await editEvent(formData)
+            setLoading(false)
+            
+            if (result.success) {
+                console.log("Event edited successfully")
+                console.log(formData.get('title'))
+                console.log(formData.get('description'))
+                console.log(formData.get('startDate'))
+                console.log(formData.get('startTime'))
+                console.log(formData.get('endDate'))
+                console.log(formData.get('endTime'))
+                console.log(formData.get('importance'))
+              setShowSuccess(true)
+              onClose()
+            } else {
+              setError(result.error || 'An unknown error occurred.')
+            }
+          }}>
             <div className="space-y-5">
-              {/* Loading State */}
-              {loadingData ? (
-                <div className="flex items-center justify-center py-8">
-                  <svg className="h-8 w-8 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+              {/* Error State */}
+              {error && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200">
+                  {error}
                 </div>
-              ) : (
-                <>
-                  {/* Error Message */}
+              )}
+
+              {/* Title */}
                   {error && (
                     <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200">
                       {error}
@@ -289,27 +250,27 @@ export default function EditEventModal({ isOpen, onClose, eventId, isTask = fals
                       onChange={setImportance}
                     />
                   </div>
-                </>
-              )}
-            </div>
+                </div>
 
-            {/* Footer */}
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-gray-50 dark:border-[#3a3a3a] dark:bg-[#212121] dark:text-white dark:hover:bg-[#2a2a2a]"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading || loadingData}
-                className="flex-1 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-              >
-                {loading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
+                <input type="hidden" name="importance" value={importance} /> {/* necessary to include importance in form data */}
+
+              {/* Footer */}
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-gray-50 dark:border-[#3a3a3a] dark:bg-[#212121] dark:text-white dark:hover:bg-[#2a2a2a]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
           </form>
         </div>
       </div>

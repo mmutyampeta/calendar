@@ -28,7 +28,7 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [editingEventId, setEditingEventId] = useState<string | null>(null)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
 
   const [events, setEvents] = useState<CalendarEvent[]>([])
 
@@ -138,8 +138,8 @@ useEffect(() => {
     router.push('/login')
   }
 
-  const handleEdit = (id: string) => {
-    setEditingEventId(id)
+  const handleEdit = (event: CalendarEvent) => {
+    setEditingEvent(event)
     setIsEditModalOpen(true)
   }
 
@@ -333,9 +333,9 @@ useEffect(() => {
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      handleEdit(event.id)
+                                      handleEdit(event)
                                     }}
-                                    className="rounded p-0.5 text-white transition-colors hover:bg-black/20"
+                                    className="rounded p-1 hover:bg-white/20 transition-colors"
                                     title="Edit"
                                   >
                                     <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -357,7 +357,7 @@ useEffect(() => {
                                 </div>
                                 <div className="truncate pr-10">{event.event_name}</div>
                                 {/* Tooltip */}
-                                {/* this div shows on hover */}
+                                {/* this div shows on hovering over the calendar tile */}
                                 <div className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-48 rounded-lg bg-black p-2 text-white shadow-xl group-hover/event:block dark:bg-white dark:text-black">
                                   <div className="font-semibold">{event.event_name}</div>
                                   {event.Description && (
@@ -498,7 +498,7 @@ useEffect(() => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleEdit(event.id)
+                                  handleEdit(event)
                                 }}
                                 className="rounded p-0.5 text-white transition-colors hover:bg-black/20"
                                 title="Edit"
@@ -561,13 +561,6 @@ useEffect(() => {
             </div>
           </div>
         )}
-
-        {/* Empty State */}
-        <div className="mt-8 text-center">
-          <p className="text-gray-500 dark:text-gray-400">
-            No events scheduled. Click &quot;+ New Event&quot; to create one.
-          </p>
-        </div>
       </main>
 
       {/* Create Event Modal */}
@@ -588,13 +581,13 @@ useEffect(() => {
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false)
-          setEditingEventId(null)
+          setEditingEvent(null)
           // Refetch events when modal closes
           setTimeout(() => {
             fetchEvents()
           }, 100)
         }}
-        eventId={editingEventId}
+        event={editingEvent}
         isTask={false}
       />
     </div>
