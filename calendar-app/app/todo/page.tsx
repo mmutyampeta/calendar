@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react'
 import EventCard, { EventCardProps } from '@/app/components/EventCard'
 import Header from '@/app/components/Header'
 import CreateEventModal from '@/app/components/CreateEventModal'
-import { getTasks, toggleEventComplete } from '@/lib/supabase/actions'
+import EditEventModal from '@/app/components/EditEventModal'
+import { getTasks, toggleEventComplete, archiveEvent } from '@/lib/supabase/actions'
 import type { User } from '@supabase/supabase-js'
 
 // Database event type based on calendar_items table
@@ -64,6 +65,8 @@ export default function TodoPage() {
   const [events, setEvents] = useState<EventCardProps[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingEventId, setEditingEventId] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [weekOffset, setWeekOffset] = useState(0) // Track which week we're viewing
 
@@ -99,6 +102,30 @@ export default function TodoPage() {
     // TODO: Open edit modal
   }
 
+  const handleEdit = (id: string) => {
+    setEditingEventId(id)
+    setIsEditModalOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    // Confirm before deleting
+    if (!confirm('Are you sure you want to delete this task?')) {
+      return
+    }
+
+    // Optimistically remove from UI
+    setEvents((prevEvents) => prevEvents.filter((event) => event.id !== id))
+
+    // Archive in database
+    const result = await archiveEvent(id)
+    
+    if (result.error) {
+      console.error('Error archiving task:', result.error)
+      // Refetch to restore on error
+      fetchTasks()
+    }
+  }
+
   useEffect(() => {
     const checkUser = async () => {
       const {
@@ -116,13 +143,14 @@ export default function TodoPage() {
   }, [router, supabase])
 
   // Fetch events from Supabase
-  useEffect(() => {
-    const fetchEvents = async () => {
-      if (!user) return
+  const fetchTasks = async (showLoadingSpinner = true) => {
+    if (!user) return
 
+    if (showLoadingSpinner) {
       setLoading(true)
-      console.log('🔍 DEBUG: Fetching events from Supabase...')
-      const result = await getTasks()
+    }
+    console.log('🔍 DEBUG: Fetching events from Supabase...')
+    const result = await getTasks()
       
       console.log('🔍 DEBUG: Raw Supabase result:', result)
       
@@ -164,7 +192,8 @@ export default function TodoPage() {
       setLoading(false)
     }
 
-    fetchEvents()
+  useEffect(() => {
+    fetchTasks()
   }, [user])
 
   if (!user) {
@@ -223,9 +252,9 @@ export default function TodoPage() {
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="rounded-md bg-black px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+            className="rounded-md bg-black px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 whitespace-nowrap"
           >
-            + New Event
+            + New Task
           </button>
         </div>
 
@@ -278,13 +307,16 @@ export default function TodoPage() {
                     Loading events...
                   </div>
                 ) : dayEvents.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                     {dayEvents.map((event) => (
                       <EventCard
                         key={event.id}
                         {...event}
+                        layout="vertical"
                         onToggleComplete={handleToggleComplete}
                         onClick={handleEventClick}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
                       />
                     ))}
                   </div>
@@ -304,30 +336,33 @@ export default function TodoPage() {
         </div>
       </main>
 
-      {/* Create Event Modal */}
+      {/* Create Task Modal */}
       <CreateEventModal
         isOpen={isModalOpen}
         onClose={async () => {
           setIsModalOpen(false)
-          // Refetch events when modal closes
-          if (user) {
-            setLoading(true)
-            const result = await getTasks()
-            
-            if (result.error) {
-              console.error('Error fetching tasks:', result.error)
-              setEvents([])
-            } else if (result.data) {
-              const mappedEvents = result.data.map(mapDbEventToCard)
-              setEvents(mappedEvents)
-            } else {
-              setEvents([])
-            }
-            
-            setLoading(false)
-          }
+          // Small delay to allow success toast to be visible, then smoothly refetch without spinner
+          setTimeout(async () => {
+            await fetchTasks(false)
+          }, 100)
         }}
         selectedDate={selectedDate}
+        isTask={true}
+      />
+
+      {/* Edit Task Modal */}
+      <EditEventModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setEditingEventId(null)
+          // Small delay to allow success toast to be visible, then smoothly refetch without spinner
+          setTimeout(() => {
+            fetchTasks(false)
+          }, 100)
+        }}
+        eventId={editingEventId}
+        isTask={true}
       />
     </div>
   )

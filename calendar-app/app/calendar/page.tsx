@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import CreateEventModal from '@/app/components/CreateEventModal'
+import EditEventModal from '@/app/components/EditEventModal'
 import SliderToggle from '@/app/components/SliderToggle'
 import Header from '@/app/components/Header'
-import {getEvents} from '@/lib/supabase/actions'
+import {getEvents, archiveEvent} from '@/lib/supabase/actions'
 
 type ViewMode = 'month' | 'week'
 
@@ -26,6 +27,8 @@ export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('month')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingEventId, setEditingEventId] = useState<string | null>(null)
 
   const [events, setEvents] = useState<CalendarEvent[]>([])
 
@@ -48,26 +51,22 @@ export default function CalendarPage() {
     checkUser()
   }, [router, supabase])
 
-useEffect(() => {
-  if (!user) return // if the user is not valid, skip 
+const fetchEvents = async () => {
+  if (!user) return
 
-  const fetchEvents = async () => {
-    const { data, error } = await supabase
-      .from("calendar_items")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("start_datetime", { ascending: true })
+  const result = await getEvents()
 
-    if (error) {
-      // handling error in supabase query 
-      console.error("Error fetching events:", error.message)
-    } else {
-      setEvents(data || [])
-    }
+  if (result.error) {
+    console.error("Error fetching events:", result.error)
+    setEvents([])
+  } else if (result.data) {
+    setEvents(result.data || [])
   }
+}
 
+useEffect(() => {
   fetchEvents()
-}, [user, supabase])
+}, [user])
 
   if (!user) {
     return null // or a loading spinner
@@ -137,6 +136,29 @@ useEffect(() => {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  const handleEdit = (id: string) => {
+    setEditingEventId(id)
+    setIsEditModalOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) {
+      return
+    }
+
+    // Optimistically remove from UI
+    setEvents((prevEvents) => prevEvents.filter((event) => event.id !== id))
+
+    // Archive in database
+    const result = await archiveEvent(id)
+    
+    if (result.error) {
+      console.error('Error archiving item:', result.error)
+      // Refetch to restore on error
+      fetchEvents()
+    }
   }
 
   const getWeekDays = (date: Date) => {
@@ -302,14 +324,41 @@ useEffect(() => {
                             {getEventsForDate(cellDate).slice(0, 3).map((event) => (
                               <div
                                 key={event.id}
-                                className={`group relative rounded px-2 py-1 text-xs font-medium text-white transition-all hover:shadow-md ${getImportanceColor(
+                                className={`group/event relative rounded px-2 py-1 text-xs font-medium text-white transition-all hover:shadow-md ${getImportanceColor(
                                   event.importance
                                 )}`}
                               >
-                                <div className="truncate">{event.event_name}</div>
+                                {/* Edit and Delete buttons */}
+                                <div className="absolute right-1 top-0.5 flex gap-0.5 opacity-0 transition-opacity group-hover/event:opacity-100">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleEdit(event.id)
+                                    }}
+                                    className="rounded p-0.5 text-white transition-colors hover:bg-black/20"
+                                    title="Edit"
+                                  >
+                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDelete(event.id)
+                                    }}
+                                    className="rounded p-0.5 text-white transition-colors hover:bg-black/20"
+                                    title="Delete"
+                                  >
+                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                                <div className="truncate pr-10">{event.event_name}</div>
                                 {/* Tooltip */}
                                 {/* this div shows on hover */}
-                                <div className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-48 rounded-lg bg-black p-2 text-white shadow-xl group-hover:block dark:bg-white dark:text-black">
+                                <div className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-48 rounded-lg bg-black p-2 text-white shadow-xl group-hover/event:block dark:bg-white dark:text-black">
                                   <div className="font-semibold">{event.event_name}</div>
                                   {event.Description && (
                                     <div className="mt-1 text-xs opacity-80">{event.Description}</div>
@@ -444,7 +493,34 @@ useEffect(() => {
                               height: `${Math.max(height, 20)}px`, // Minimum height of 20px
                             }}
                           >
-                            <div className="font-semibold truncate">{event.event_name}</div>
+                            {/* Edit and Delete buttons */}
+                            <div className="absolute right-1 top-0.5 flex gap-0.5 opacity-0 transition-opacity group-hover/event:opacity-100 z-10">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEdit(event.id)
+                                }}
+                                className="rounded p-0.5 text-white transition-colors hover:bg-black/20"
+                                title="Edit"
+                              >
+                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDelete(event.id)
+                                }}
+                                className="rounded p-0.5 text-white transition-colors hover:bg-black/20"
+                                title="Delete"
+                              >
+                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                            <div className="font-semibold truncate pr-10">{event.event_name}</div>
                             {height > 40 && (
                               <div className="text-[10px] opacity-90">
                                 {startDate.toLocaleTimeString('en-US', {
@@ -499,20 +575,27 @@ useEffect(() => {
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false)
-          // Refetch events when modal closes
-          if (user) {
-            getEvents().then(({ data, error }) => {
-              if (error) {
-                console.error('Error fetching events:', error)
-              }
-              else if (data) {
-                console.log('Fetched events:', data)
-                setEvents(data || [])
-              }
-            })
-          }
+          // Refetch events when modal closes with a small delay
+          setTimeout(() => {
+            fetchEvents()
+          }, 100)
         }}
         selectedDate={selectedDate}
+      />
+
+      {/* Edit Event Modal */}
+      <EditEventModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setEditingEventId(null)
+          // Refetch events when modal closes
+          setTimeout(() => {
+            fetchEvents()
+          }, 100)
+        }}
+        eventId={editingEventId}
+        isTask={false}
       />
     </div>
   )

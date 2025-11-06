@@ -47,7 +47,35 @@ export async function createEvent(input: NewEventInput) {
 }
 
 /**
- * Server Action to get all events for the current user
+ * Server Action to get a single event by ID
+ */
+export async function getEventById(eventId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'User not authenticated' }
+  }
+
+  const { data, error } = await supabase
+    .from('calendar_items')
+    .select('*')
+    .eq('id', eventId)
+    .eq('user_id', user.id) // Ensure user can only access their own events
+    .single()
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { data }
+}
+
+/**
+ * Server Action to get all events (and tasks) for the current user
  */
 export async function getEvents() {
   const supabase = await createClient()
@@ -64,12 +92,12 @@ export async function getEvents() {
     .from('calendar_items')
     .select('*')
     .eq('user_id', user.id)
-    .is('is_task', false) // Only fetch events, not tasks
-    .eq('archived', false) // Exclude archived events
+    // No is_task filter - get both events and tasks
+    .eq('archived', false) // Exclude archived items
     .order('start_datetime', { ascending: true })
 
   // console log data for debugging
-  console.log('Fetched events for user:', user.id, data)
+  console.log('Fetched calendar items for user:', user.id, data)
 
   if (error) {
     return { error: error.message }
